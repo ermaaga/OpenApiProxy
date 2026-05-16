@@ -1,7 +1,10 @@
 {
-  "name": "openai-proxy",
-  "version": "0.1.0",
+  "name": "@ermaga/openai-proxy",
+  "version": "1.0.0",
   "description": "Local proxy that maps the Anthropic Messages API to OpenAI-compatible providers (NVIDIA NIM, Groq, OpenAI, etc.). Drop-in endpoint for Claude Code.",
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "openproxy": "bin/openproxy.js"
   },
