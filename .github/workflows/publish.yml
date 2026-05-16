@@ -9,28 +9,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write  # necessario per npm provenance
+      id-token: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Build (se necessario)
-        run: npm run build --if-present
+      - run: npm run build --if-present
 
-      - name: Run tests
-        run: npm test --if-present
-
-      - name: Publish to NPM
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --provenance --access public
