@@ -1,7 +1,24 @@
-# openproxy
-> Local proxy that exposes OpenAI-compatible providers (NVIDIA NIM, Groq, OpenAI, …) through the Anthropic Messages API. Drop-in endpoint for Claude Code.
+<p align="center">
+  <img src="banner.svg" alt="openproxy banner" width="100%"/>
+</p>
 
-Translates `POST /v1/messages` (Anthropic format) into `POST /chat/completions` (OpenAI format) and back, with full support for streaming (SSE) and tool use. Designed to let you run Claude Code against any provider that speaks the OpenAI chat-completions API.
+# openproxy
+
+> **Run Claude Code against any OpenAI-compatible provider.**
+> Drop-in local proxy that translates the Anthropic Messages API into OpenAI chat completions — and back.
+
+```
+Claude Code  ──(Anthropic format)──▶  openproxy :4000
+                                            │
+                                            ▼  OpenAI format
+                                      Provider API
+                                  (NVIDIA NIM · Groq · OpenAI · …)
+                                            │
+                                            ▼  translated back
+                                        Claude Code  ✅
+```
+
+Full support for **streaming (SSE)** and **tool use**. Works with any provider that speaks the OpenAI chat-completions API.
 
 ---
 
@@ -11,50 +28,61 @@ Translates `POST /v1/messages` (Anthropic format) into `POST /chat/completions` 
 npm install -g openai-proxy
 ```
 
-This installs the global `openproxy` command. Requires Node.js ≥ 18.
+Installs the global `openproxy` command. Requires **Node.js ≥ 18**.
 
 ---
 
-## Get an upstream API key
-
-Pick any provider that exposes an OpenAI-compatible endpoint:
+## Supported providers
 
 | Provider | API base | Notes |
 |----------|----------|-------|
-| [NVIDIA NIM](https://build.nvidia.com) | `https://integrate.api.nvidia.com/v1` | Free tier, large models (Qwen, Llama, …) |
-| [Groq](https://console.groq.com) | `https://api.groq.com/openai/v1` | Free tier, fast inference |
+| [NVIDIA NIM](https://build.nvidia.com) | `https://integrate.api.nvidia.com/v1` | Free tier — large models (Qwen, Llama, …) |
+| [Groq](https://console.groq.com) | `https://api.groq.com/openai/v1` | Free tier — blazing fast inference |
 | [OpenAI](https://platform.openai.com) | `https://api.openai.com/v1` | Paid |
+
+Any provider with an OpenAI-compatible `/chat/completions` endpoint works.
 
 ---
 
-## First-time setup
+## Quick start
 
-Easiest way — let the browser walk you through it:
+### Option A — Browser wizard (recommended)
 
 ```bash
 openproxy test
 ```
 
-This starts the proxy and opens the configuration page at `http://127.0.0.1:4000/test`. Fill in **API Key**, **API Base URL** and **Model**, click **Save configuration** and you're done. Settings are persisted to `~/.openproxy/config.json` (mode `600` on POSIX). Next time, just run `openproxy start`.
+Opens `http://127.0.0.1:4000/test` in your browser. Fill in **API Key**, **API Base URL** and **Model**, hit **Save configuration**. Done. Next time, just:
 
-Prefer the CLI?
+```bash
+openproxy start
+```
+
+### Option B — CLI
 
 ```bash
 openproxy config \
-  --api-key nvapi-XXXXXXXXXX \
-  --model qwen/qwen3-coder-480b-a35b-instruct
+  --api-key   nvapi-XXXXXXXXXX \
+  --api-base  https://integrate.api.nvidia.com/v1 \
+  --model     qwen/qwen3-coder-480b-a35b-instruct
 ```
 
-Inspect (with API key redacted):
+---
+
+## Use with Claude Code
 
 ```bash
-openproxy config
+export ANTHROPIC_BASE_URL="http://localhost:4000"
+export ANTHROPIC_API_KEY="fake-key"   # any string — the proxy uses its own key
+claude
 ```
 
-Clear:
+To persist these across shell sessions:
 
 ```bash
-openproxy config --clear
+echo 'export ANTHROPIC_BASE_URL="http://localhost:4000"' >> ~/.zshrc
+echo 'export ANTHROPIC_API_KEY="fake-key"'               >> ~/.zshrc
+source ~/.zshrc
 ```
 
 ---
@@ -62,22 +90,20 @@ openproxy config --clear
 ## Daily usage
 
 ```bash
-openproxy start          # detach and run in background
+openproxy start          # start in the background
 openproxy status         # check if running
 openproxy stop           # stop the background process
-openproxy logs -f        # follow logs
-openproxy test           # open the browser-based tester / config page
+openproxy logs -f        # follow live logs
+openproxy test           # open browser tester / config UI
 ```
 
-The proxy binds to `127.0.0.1` only (loopback), so the config endpoint isn't reachable from the network.
-
-Override config on the fly:
+**On-the-fly overrides:**
 
 ```bash
 openproxy start --port 5000 --model another-model
 ```
 
-Run attached to the current shell (useful for debugging):
+**Debug mode (attached to shell):**
 
 ```bash
 openproxy start --foreground
@@ -85,44 +111,23 @@ openproxy start --foreground
 
 ---
 
-## Use with Claude Code
-
-Once the proxy is running:
-
-```bash
-export ANTHROPIC_BASE_URL="http://localhost:4000"
-export ANTHROPIC_API_KEY="fake-key"   # any string — the proxy uses its own server-side key
-claude
-```
-
-Persist these in your shell rc (`~/.zshrc`, `~/.bashrc`):
-
-```bash
-echo 'export ANTHROPIC_BASE_URL="http://localhost:4000"' >> ~/.zshrc
-echo 'export ANTHROPIC_API_KEY="fake-key"' >> ~/.zshrc
-source ~/.zshrc
-```
-
----
-
 ## Browser tester
 
-After `openproxy start`, run:
+After `openproxy start`:
 
 ```bash
 openproxy test
 ```
 
-This opens `http://localhost:4000/test` in your default browser. The page lets you:
-- send a request to the proxy and see the parsed response
-- toggle streaming (SSE) mode
-- copy the equivalent `curl` command
+Opens `http://localhost:4000/test`. From here you can:
 
-You can also visit the URL directly.
+- Send test requests and inspect parsed responses
+- Toggle streaming (SSE) on/off
+- Copy the equivalent `curl` command
 
 ---
 
-## All commands
+## All commands & options
 
 ```
 openproxy start [options]    Start the proxy in the background
@@ -132,48 +137,41 @@ openproxy test               Open the browser-based tester
 openproxy logs [-f]          Print proxy logs (-f to follow)
 openproxy config [options]   Persist config to ~/.openproxy/config.json
 openproxy help               Show usage
-
-Options (start / config):
-  --api-key  <key>     Upstream API key
-  --api-base <url>     Upstream base URL  (default: https://integrate.api.nvidia.com/v1)
-  --model    <name>    Model to forward upstream
-  --port     <n>       Local port         (default: 4000)
-  --timeout  <s>       Upstream timeout   (default: 300)
-
-start-only:
-  --foreground         Run attached to current shell instead of detaching
-
-config-only:
-  --clear              Delete the saved config file
 ```
+
+| Flag | Applies to | Default |
+|------|-----------|---------|
+| `--api-key <key>` | start, config | — |
+| `--api-base <url>` | start, config | `https://integrate.api.nvidia.com/v1` |
+| `--model <name>` | start, config | — |
+| `--port <n>` | start, config | `4000` |
+| `--timeout <s>` | start, config | `300` |
+| `--foreground` | start only | — |
+| `--clear` | config only | — |
 
 ---
 
 ## Configuration precedence
 
-For each setting, the first source that has a value wins:
+For every setting, the first source that has a value wins:
 
 1. CLI flag (`--api-key`, `--model`, …)
 2. Environment variable (`API_KEY`, `MODEL`, `API_BASE`, `PORT`, `REQUEST_TIMEOUT`)
 3. `~/.openproxy/config.json`
 4. Built-in default (only for `api-base`, `port`, `timeout`)
 
-The proxy starts even without `API_KEY` / `MODEL`, but `/v1/messages` returns **503** until both are set. Use `openproxy test` (browser UI) or `openproxy config` to finish setup.
+> The proxy starts even without `API_KEY` / `MODEL`, but `/v1/messages` returns **503** until both are configured.
 
-### Shell env vars vs saved config — important caveat
+### Shell env vars vs. saved config
 
-If you export `API_KEY` / `MODEL` / `API_BASE` in your shell, **those win over `~/.openproxy/config.json`** at every start.
+If you export `API_KEY` / `MODEL` / `API_BASE` in your shell, **those take priority over `~/.openproxy/config.json`** on every start.
 
-Saving from the browser config panel writes to the file. The running proxy switches to the new values immediately, but on the **next** restart the shell env var takes precedence again — making the save look like it had no effect.
+The browser config page makes this transparent:
 
-The config page makes this explicit:
+- Each field shows a source badge: `saved` (green) or `from env var` (yellow)
+- A yellow banner lists every env var that will override on the next restart, with the exact `unset` command
 
-- Each field has a source badge: `saved` (green, from file) or `from env var` (yellow, from shell)
-- A yellow banner appears at the top of the Configuration panel listing every shell env var that will override on next start, with the exact `unset` command to fix it
-
-If you want saved config to be authoritative, `unset` the matching shell env vars and start a fresh shell session. If you prefer managing credentials via shell env, ignore the file and skip the browser save.
-
-The proxy detects "shell" env vars via `OPENPROXY_SHELL_ENV` — set automatically by the `openproxy` CLI to record which env vars were present in the user's shell at invocation time. When the server runs without the CLI wrapper, any env var is assumed to come from the shell.
+To make saved config authoritative, `unset` the conflicting shell vars and restart.
 
 ---
 
@@ -181,43 +179,32 @@ The proxy detects "shell" env vars via `OPENPROXY_SHELL_ENV` — set automatical
 
 | Path | Purpose |
 |------|---------|
-| `~/.openproxy/config.json` | Persisted config (chmod 600 on POSIX) |
+| `~/.openproxy/config.json` | Persisted config (`chmod 600` on POSIX) |
 | `~/.openproxy/proxy.pid` | Background process PID |
-| `~/.openproxy/proxy.log` | Combined stdout/stderr of the proxy |
+| `~/.openproxy/proxy.log` | Combined stdout/stderr |
+
+The proxy binds to `127.0.0.1` only — the config endpoint is never reachable from the network.
 
 ---
 
-## Common errors
+## Troubleshooting
 
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `503 Proxy not configured` from proxy | API key or model still unset | `openproxy test` (browser) or `openproxy config --api-key K --model M` |
-| `Proxy already running` | A previous instance is still alive | `openproxy stop` |
-| `401 Unauthorized` from upstream | Wrong API key | Re-run `openproxy config --api-key …` |
-| `404 Not Found` from upstream | Wrong model name | Verify the exact slug on the provider's site |
-| `Upstream timeout` | Slow provider | Increase: `openproxy start --timeout 600` |
-| Saved values reappear after restart | Shell env vars override the file | `unset API_KEY MODEL` then restart (the test page lists which) |
-| Claude Code: `model not found` | Missing client env vars | Re-export `ANTHROPIC_BASE_URL` / `ANTHROPIC_API_KEY` |
-
----
-
-## Flow
-
-```
-Claude Code  ──(Anthropic format)──▶  openproxy (localhost:4000)
-                                          │
-                                          ▼  (OpenAI format)
-                                    Provider API
-                                          │
-                                          ▼  (OpenAI response, possibly SSE)
-                                       openproxy
-                                          │  (Anthropic response, possibly SSE)
-                                          ▼
-                                      Claude Code  ✅
-```
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `503 Proxy not configured` | API key or model not set | `openproxy test` or `openproxy config --api-key K --model M` |
+| `Proxy already running` | Previous instance still alive | `openproxy stop` |
+| `401 Unauthorized` from upstream | Wrong API key | `openproxy config --api-key <correct-key>` |
+| `404 Not Found` from upstream | Wrong model name | Check the exact slug on the provider's dashboard |
+| `Upstream timeout` | Slow provider response | `openproxy start --timeout 600` |
+| Saved values lost after restart | Shell env vars override the file | `unset API_KEY MODEL` then restart |
+| Claude Code: `model not found` | Missing client env vars | Re-export `ANTHROPIC_BASE_URL` and `ANTHROPIC_API_KEY` |
 
 ---
 
 ## License
 
-MIT
+[Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+
+---
+
+powered with ❤️ from **ermaaga** · 🤖
