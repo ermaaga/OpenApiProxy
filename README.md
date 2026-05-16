@@ -25,7 +25,7 @@ Full support for **streaming (SSE)** and **tool use**. Works with any provider t
 ## Install
 
 ```bash
-npm install -g openai-proxy
+npm install -g @ermaaga/openai-proxy
 ```
 
 Installs the global `openproxy` command. Requires **Node.js ≥ 18**.
