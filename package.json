@@ -2,9 +2,7 @@
   "name": "@ermaga/openai-proxy",
   "version": "1.0.0",
   "description": "Local proxy that maps the Anthropic Messages API to OpenAI-compatible providers (NVIDIA NIM, Groq, OpenAI, etc.). Drop-in endpoint for Claude Code.",
-  "publishConfig": {
-    "access": "public"
-  },
+  "main": "src/server.js",
   "bin": {
     "openproxy": "bin/openproxy.js"
   },
@@ -19,6 +17,10 @@
   "engines": {
     "node": ">=18"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ermaga/openai-proxy"
+  },
   "keywords": [
     "claude",
     "claude-code",
@@ -30,5 +32,8 @@
     "llm",
     "cli"
   ],
-  "license": "MIT"
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  }
 }
