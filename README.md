@@ -75,6 +75,10 @@ openproxy config \
 export ANTHROPIC_BASE_URL="http://localhost:4000"
 export ANTHROPIC_API_KEY="fake-key"   # any string — the proxy uses its own key
 claude
+
+or
+
+claude --model quen3
 ```
 
 To persist these across shell sessions:
