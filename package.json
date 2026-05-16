@@ -1,0 +1,31 @@
+{
+  "name": "openai-anthropic-proxy",
+  "version": "0.1.0",
+  "description": "Local proxy that maps the Anthropic Messages API to OpenAI-compatible providers (NVIDIA NIM, Groq, OpenAI, etc.). Drop-in endpoint for Claude Code.",
+  "bin": {
+    "openproxy": "bin/openproxy.js"
+  },
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "anthropic",
+    "openai",
+    "proxy",
+    "nvidia-nim",
+    "groq",
+    "llm",
+    "cli"
+  ],
+  "license": "MIT"
+}

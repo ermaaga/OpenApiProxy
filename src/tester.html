@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>openproxy — Configuration & Tester</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f7; color: #1d1d1f; }
+  h1 { margin-bottom: 0.5rem; }
+  h2 { font-size: 1.15rem; margin: 0 0 0.5rem; }
+  .card { background: #fff; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  label { display: block; font-weight: 600; margin: 0.75rem 0 0.25rem; font-size: 0.9rem; }
+  input, textarea, select { width: 100%; padding: 0.55rem 0.7rem; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 0.95rem; font-family: inherit; box-sizing: border-box; }
+  textarea { resize: vertical; min-height: 80px; font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; }
+  button { background: #0071e3; color: #fff; border: 0; padding: 0.7rem 1.4rem; border-radius: 6px; font-size: 0.95rem; cursor: pointer; margin-top: 1rem; margin-right: 0.5rem; }
+  button:hover { background: #0077ed; }
+  button:disabled { background: #999; cursor: not-allowed; }
+  button.secondary { background: #6e6e73; }
+  .row { display: flex; gap: 1rem; }
+  .row > div { flex: 1; }
+  pre { background: #1d1d1f; color: #f5f5f7; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; white-space: pre-wrap; word-break: break-all; }
+  .status { padding: 0.5rem 0.75rem; border-radius: 6px; margin-top: 0.75rem; font-weight: 600; font-size: 0.9rem; }
+  .ok { background: #d4edda; color: #155724; }
+  .err { background: #f8d7da; color: #721c24; }
+  .warn { background: #fff3cd; color: #856404; }
+  .muted { color: #6e6e73; font-size: 0.85rem; }
+  .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; margin-left: 0.5rem; vertical-align: middle; }
+  .badge.green { background: #d4edda; color: #155724; }
+  .badge.red { background: #f8d7da; color: #721c24; }
+  .tabs { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .tab { padding: 0.4rem 0.8rem; background: #e8e8ed; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+  .tab.active { background: #0071e3; color: #fff; }
+  .hidden { display: none; }
+  .toggle { margin-top: 0.75rem; }
+  .toggle input { width: auto; margin-right: 0.4rem; vertical-align: middle; }
+  .summary { font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; color: #444; margin-top: 0.5rem; }
+  .source { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 4px; font-size: 0.72rem; font-weight: 600; margin-left: 0.5rem; vertical-align: middle; }
+  .source.env { background: #fff3cd; color: #856404; }
+  .source.file { background: #e8f4ea; color: #155724; }
+  .source.none { background: #e8e8ed; color: #6e6e73; }
+  code { background: #f0f0f3; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.85em; }
+</style>
+</head>
+<body>
+
+<h1>openproxy</h1>
+<p class="muted">Configure your credentials and test the proxy end-to-end. Saved to <code>~/.openproxy/config.json</code>.</p>
+
+<div class="card">
+  <h2>Configuration <span id="cfgBadge" class="badge red">Not configured</span></h2>
+
+  <div id="envWarning" class="status warn hidden"></div>
+
+  <label for="cfgApiKey">API Key <span id="srcApiKey" class="source none"></span></label>
+  <input id="cfgApiKey" type="password" placeholder="leave empty to keep the current value">
+
+  <label for="cfgApiBase">API Base URL <span id="srcApiBase" class="source none"></span></label>
+  <input id="cfgApiBase" type="text" placeholder="https://integrate.api.nvidia.com/v1">
+
+  <label for="cfgModel">Model <span id="srcModel" class="source none"></span></label>
+  <input id="cfgModel" type="text" placeholder="qwen/qwen3-coder-480b-a35b-instruct">
+
+  <div class="muted summary" id="cfgSummary"></div>
+
+  <button id="cfgSave">Save configuration</button>
+  <button id="cfgReload" class="secondary">Reload from server</button>
+
+  <div id="cfgStatus" class="status hidden"></div>
+</div>
+
+<div class="card">
+  <h2>Test request</h2>
+
+  <label for="prompt">Prompt</label>
+  <textarea id="prompt">Say "hello" and nothing else.</textarea>
+
+  <div class="row">
+    <div>
+      <label for="maxtok">Max tokens</label>
+      <input id="maxtok" type="number" value="128" min="1" max="8192">
+    </div>
+    <div class="toggle">
+      <label><input id="stream" type="checkbox"> Stream (SSE)</label>
+    </div>
+  </div>
+
+  <button id="send">Send request</button>
+  <button id="copy" class="secondary">Copy curl</button>
+
+  <div id="status" class="status hidden"></div>
+</div>
+
+<div class="card">
+  <div class="tabs">
+    <div class="tab active" data-tab="response">Response</div>
+    <div class="tab" data-tab="curl">curl command</div>
+    <div class="tab" data-tab="raw">Raw events</div>
+  </div>
+
+  <div id="tab-response">
+    <pre id="response">— no request sent yet —</pre>
+  </div>
+  <div id="tab-curl" class="hidden">
+    <pre id="curl">—</pre>
+  </div>
+  <div id="tab-raw" class="hidden">
+    <pre id="raw">—</pre>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const origin = (location.protocol === 'file:' || !location.origin || location.origin === 'null')
+  ? 'http://localhost:4000'
+  : location.origin;
+const PROXY_URL = origin + '/v1/messages';
+const CONFIG_URL = origin + '/config';
+
+function setCfgStatus(msg, kind) {
+  const el = $("cfgStatus");
+  el.textContent = msg;
+  el.className = "status " + kind;
+  el.classList.remove("hidden");
+}
+
+function setStatus(msg, ok) {
+  const el = $("status");
+  el.textContent = msg;
+  el.className = "status " + (ok ? "ok" : "err");
+  el.classList.remove("hidden");
+}
+
+function renderSourceBadge(elId, source) {
+  const el = $(elId);
+  if (source === 'env') { el.textContent = 'from env var'; el.className = 'source env'; }
+  else if (source === 'file') { el.textContent = 'saved'; el.className = 'source file'; }
+  else { el.textContent = 'unset'; el.className = 'source none'; }
+}
+
+function renderCfgSummary(cfg) {
+  const badge = $("cfgBadge");
+  if (cfg.configured) {
+    badge.textContent = "Configured";
+    badge.className = "badge green";
+  } else {
+    badge.textContent = "Not configured";
+    badge.className = "badge red";
+  }
+  $("cfgSummary").textContent =
+    `API key: ${cfg.apiKeyMasked || '(none)'} • base: ${cfg.apiBase} • model: ${cfg.model || '(none)'}`;
+  $("cfgApiBase").value = cfg.apiBase || '';
+  $("cfgModel").value = cfg.model || '';
+
+  const src = cfg.sources || {};
+  renderSourceBadge('srcApiKey', src.apiKey);
+  renderSourceBadge('srcApiBase', src.apiBase);
+  renderSourceBadge('srcModel', src.model);
+
+  const overrides = cfg.shellEnvOverrides || [];
+  const warn = $("envWarning");
+  if (overrides.length) {
+    warn.innerHTML =
+      '⚠ <strong>Shell environment overrides detected.</strong> ' +
+      `On next start, these env vars in your shell will override the saved file: <code>${overrides.join('</code>, <code>')}</code>. ` +
+      'Run <code>unset ' + overrides.join(' ') + '</code> in your shell to let saved values take effect.';
+    warn.classList.remove('hidden');
+  } else {
+    warn.classList.add('hidden');
+  }
+}
+
+async function loadConfig() {
+  try {
+    const res = await fetch(CONFIG_URL);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const cfg = await res.json();
+    renderCfgSummary(cfg);
+    return cfg;
+  } catch (e) {
+    setCfgStatus("Cannot reach proxy at " + CONFIG_URL + ": " + e.message, "err");
+  }
+}
+
+async function saveConfig() {
+  const body = {};
+  const apiKey = $("cfgApiKey").value.trim();
+  const apiBase = $("cfgApiBase").value.trim();
+  const model = $("cfgModel").value.trim();
+  if (apiKey) body.apiKey = apiKey;
+  if (apiBase) body.apiBase = apiBase;
+  if (model) body.model = model;
+  if (Object.keys(body).length === 0) {
+    setCfgStatus("Nothing to save (all fields empty)", "warn");
+    return;
+  }
+  try {
+    const res = await fetch(CONFIG_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      setCfgStatus("Save failed (" + res.status + "): " + txt, "err");
+      return;
+    }
+    const cfg = await res.json();
+    renderCfgSummary(cfg);
+    $("cfgApiKey").value = '';
+    setCfgStatus(cfg.configured
+      ? "Saved. The proxy is now fully configured."
+      : "Saved partial configuration. Still missing some fields.",
+      cfg.configured ? "ok" : "warn");
+  } catch (e) {
+    setCfgStatus("Save failed: " + e.message, "err");
+  }
+}
+
+function buildPayload() {
+  return {
+    model: "claude-3-5-sonnet-20241022",
+    max_tokens: parseInt($("maxtok").value, 10) || 128,
+    messages: [{ role: "user", content: $("prompt").value }],
+    stream: $("stream").checked,
+  };
+}
+
+function buildCurl() {
+  const body = JSON.stringify(buildPayload(), null, 2);
+  const escaped = body.replace(/'/g, "'\\''");
+  return `curl -X POST '${PROXY_URL}' \\
+  -H 'Content-Type: application/json' \\
+  -H 'x-api-key: fake-key' \\
+  -H 'anthropic-version: 2023-06-01' \\
+  -d '${escaped}'`;
+}
+
+function refreshCurl() { $("curl").textContent = buildCurl(); }
+
+document.querySelectorAll(".tab").forEach(t => {
+  t.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    ["response","curl","raw"].forEach(n => $("tab-"+n).classList.add("hidden"));
+    $("tab-"+t.dataset.tab).classList.remove("hidden");
+    if (t.dataset.tab === "curl") refreshCurl();
+  });
+});
+
+["prompt","maxtok","stream"].forEach(id => $(id).addEventListener("input", refreshCurl));
+refreshCurl();
+
+$("cfgSave").addEventListener("click", saveConfig);
+$("cfgReload").addEventListener("click", loadConfig);
+
+$("copy").addEventListener("click", async () => {
+  refreshCurl();
+  await navigator.clipboard.writeText($("curl").textContent);
+  setStatus("curl command copied to clipboard", true);
+});
+
+async function sendNonStream(payload, started) {
+  const res = await fetch(PROXY_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": "fake-key",
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify(payload),
+  });
+  const elapsed = Math.round(performance.now() - started);
+  const text = await res.text();
+  let parsed = null;
+  try { parsed = JSON.parse(text); } catch {}
+  $("raw").textContent = parsed ? JSON.stringify(parsed, null, 2) : text;
+  if (res.ok && parsed && parsed.content) {
+    $("response").textContent = parsed.content.map(c => c.text || "").join("\n");
+    const u = parsed.usage || {};
+    setStatus(`OK ${res.status} • ${elapsed}ms • in=${u.input_tokens ?? "?"} out=${u.output_tokens ?? "?"}`, true);
+  } else {
+    $("response").textContent = text;
+    setStatus(`Error ${res.status} • ${elapsed}ms`, false);
+  }
+}
+
+async function sendStream(payload, started) {
+  const res = await fetch(PROXY_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": "fake-key",
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    $("response").textContent = text;
+    $("raw").textContent = text;
+    setStatus(`Error ${res.status}`, false);
+    return;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "", rawAll = "", responseText = "", outTokens = 0;
+  $("response").textContent = "";
+  $("raw").textContent = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    rawAll += chunk;
+    $("raw").textContent = rawAll;
+    buf += chunk;
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line.startsWith("data:")) continue;
+      try {
+        const ev = JSON.parse(line.slice(5).trim());
+        if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta") {
+          responseText += ev.delta.text || "";
+          $("response").textContent = responseText;
+        }
+        if (ev.type === "message_delta" && ev.usage) outTokens = ev.usage.output_tokens || outTokens;
+      } catch {}
+    }
+  }
+  const elapsed = Math.round(performance.now() - started);
+  setStatus(`OK stream • ${elapsed}ms • out=${outTokens}`, true);
+}
+
+$("send").addEventListener("click", async () => {
+  const payload = buildPayload();
+  const btn = $("send");
+  btn.disabled = true;
+  setStatus("Sending request...", true);
+  $("response").textContent = "...";
+  $("raw").textContent = "...";
+  const started = performance.now();
+  try {
+    if (payload.stream) await sendStream(payload, started);
+    else await sendNonStream(payload, started);
+  } catch (e) {
+    setStatus("Network error: " + e.message, false);
+    $("response").textContent = String(e);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+loadConfig();
+</script>
+
+</body>
+</html>
