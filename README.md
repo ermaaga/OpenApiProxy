@@ -8,7 +8,7 @@ Translates `POST /v1/messages` (Anthropic format) into `POST /chat/completions` 
 ## Install
 
 ```bash
-npm install -g openai-anthropic-proxy
+npm install -g openai-proxy
 ```
 
 This installs the global `openproxy` command. Requires Node.js ≥ 18.
